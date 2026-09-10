@@ -1,7 +1,8 @@
-// Chat-Inspector - Facebook visible message detector
-// TEST VERSION: visible DOM detection only
+// Chat-Inspector
+// VERSION 0.2 — Visible DOM message detection test
+// No server / database / Telegram connection yet.
 
-console.log("✅ Chat-Inspector: Message detector loaded");
+console.log("✅ Chat-Inspector v0.2 loaded");
 
 const seen = new Set();
 
@@ -13,9 +14,9 @@ function cleanText(text) {
 
 function isUsefulText(text) {
   if (!text) return false;
-  if (text.length < 1 || text.length > 2000) return false;
+  if (text.length > 2000) return false;
 
-  const ignore = [
+  const ignore = new Set([
     "Search Facebook",
     "Search Messenger",
     "Message",
@@ -23,58 +24,75 @@ function isUsefulText(text) {
     "Like",
     "Comment",
     "Share"
-  ];
+  ]);
 
-  return !ignore.includes(text);
+  return !ignore.has(text);
 }
 
-function detectMessageElement(el) {
-  if (!(el instanceof HTMLElement)) return;
+function makeKey(text, element) {
+  // Text अकेला unique ID नहीं है।
+  // Element + text का temporary key इस्तेमाल करेंगे।
+  return text + "||" + String(element);
+}
 
-  const text = cleanText(el.innerText || el.textContent);
+function detectMessageElement(element) {
+  if (!(element instanceof HTMLElement)) return;
+
+  const text = cleanText(
+    element.innerText || element.textContent || ""
+  );
 
   if (!isUsefulText(text)) return;
 
-  // Avoid processing the same visible element repeatedly
-  const key = text;
+  // बहुत बड़े containers को message न मानें
+  if (text.length > 500) return;
+
+  const key = makeKey(text, element);
 
   if (seen.has(key)) return;
   seen.add(key);
 
-  // Keep memory under control
-  if (seen.size > 1000) {
+  // Memory limit
+  if (seen.size > 2000) {
     const first = seen.values().next().value;
     seen.delete(first);
   }
 
-  const data = {
+  const record = {
     text: text,
     detectedAt: new Date().toISOString(),
     page: location.href
   };
 
   console.log("📩 MESSAGE DETECTED");
-  console.log(data);
+  console.table(record);
+
+  // Test के लिए browser event भी fire करेंगे
+  window.dispatchEvent(
+    new CustomEvent("CHAT_INSPECTOR_MESSAGE", {
+      detail: record
+    })
+  );
 }
 
-// Watch Facebook/Messenger DOM changes
+function scanNode(node) {
+  if (!(node instanceof HTMLElement)) return;
+
+  detectMessageElement(node);
+
+  if (node.querySelectorAll) {
+    const children = node.querySelectorAll("*");
+
+    for (const child of children) {
+      detectMessageElement(child);
+    }
+  }
+}
+
 const observer = new MutationObserver((mutations) => {
   for (const mutation of mutations) {
-
     for (const node of mutation.addedNodes) {
-      if (!(node instanceof HTMLElement)) continue;
-
-      // Check the added element
-      detectMessageElement(node);
-
-      // Check its children
-      const elements = node.querySelectorAll
-        ? node.querySelectorAll("*")
-        : [];
-
-      for (const el of elements) {
-        detectMessageElement(el);
-      }
+      scanNode(node);
     }
   }
 });
@@ -90,7 +108,10 @@ function startObserver() {
     subtree: true
   });
 
-  console.log("🟢 Chat-Inspector: DOM monitoring active");
+  console.log("🟢 Chat-Inspector: DOM monitoring ACTIVE");
+
+  // Initial visible-page scan
+  scanNode(document.body);
 }
 
 startObserver();
