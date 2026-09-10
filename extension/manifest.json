@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Chat-Inspector",
+  "version": "0.1.0",
+  "description": "Authorized live-message detection prototype",
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
