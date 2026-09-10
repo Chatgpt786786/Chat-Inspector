@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chat-Inspector Test</title>
+</head>
+<body>
+
+<h2>Chat-Inspector Live Detection Test</h2>
+
+<div id="chat"></div>
+
+<button onclick="addMessage()">
+  Add Test Message
+</button>
+
+<script>
+function addMessage() {
+  const message = document.createElement("div");
+
+  message.textContent =
+    "Test message — " +
+    new Date().toLocaleTimeString();
+
+  document.getElementById("chat").appendChild(message);
+}
+</script>
+
+</body>
+</html>
